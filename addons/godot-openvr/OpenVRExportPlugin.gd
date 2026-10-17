@@ -1,6 +1,10 @@
 @tool
 extends EditorExportPlugin
 
+# Modified by Eden7600: Godot 4.6 requires an export plugin name.
+func _get_name() -> String:
+	return "OpenVR"
+
 func _export_begin(features: PackedStringArray, is_debug: bool, path: String, flags: int ):
 	var dir = DirAccess.open('res://')
 	
