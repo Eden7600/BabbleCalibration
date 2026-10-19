@@ -1,0 +1,168 @@
+{
+  "schema_version": 1,
+  "locales": [
+    "en",
+    "es",
+    "af",
+    "ar",
+    "ca",
+    "cs",
+    "da",
+    "de",
+    "el",
+    "fi",
+    "fr",
+    "he",
+    "hu",
+    "it",
+    "ja",
+    "ko",
+    "nl",
+    "no",
+    "pl",
+    "pt",
+    "ro",
+    "ru",
+    "sr",
+    "sv",
+    "tr",
+    "uk",
+    "vi",
+    "zh_CN",
+    "zh_TW"
+  ],
+  "engine_locale_aliases": {
+    "no": "nb"
+  },
+  "source_locale": "en",
+  "translation_method": "AI-assisted translation; not reviewed by native-language maintainers",
+  "human_reviewed_locales": [],
+  "scope": "Overlay capture instructions, motion guidance, progress and terminal status only. Desktop Training_ resource translation remains separate.",
+  "new_keys": [
+    "CaptureInstructionBlink",
+    "CaptureInstructionBrow",
+    "CaptureInstructionBrowRamp",
+    "CaptureInstructionFreeExpression",
+    "CaptureInstructionGaze",
+    "CaptureInstructionLidRamp",
+    "CaptureInstructionOpen",
+    "CaptureInstructionSquint",
+    "CaptureInstructionSquintRamp",
+    "CaptureInstructionWiden",
+    "CaptureInstructionWidenRamp",
+    "CaptureInstructionWinkLeft",
+    "CaptureInstructionWinkRight",
+    "CaptureMotionGuidance",
+    "FreshCheckComplete",
+    "GazeRoutine",
+    "GraphDesktopHint",
+    "GraphElapsed",
+    "GraphStageCheckingModel",
+    "GraphStageExporting",
+    "GraphStageExpressionTraining",
+    "GraphStageGazeTraining",
+    "GraphStagePreparing",
+    "GraphSteps",
+    "GraphTitle",
+    "GraphWaitingMetrics",
+    "OpenRoutine",
+    "Settling",
+    "TrainingCancelled",
+    "TrainingComplete",
+    "TrainingFailed"
+  ],
+  "revised_keys": [
+    "BrowRoutine",
+    "BrowTutorial",
+    "GazeExpressionRoutine",
+    "GazeExpressionTutorial",
+    "GazeTutorial",
+    "GazeTutorialShort",
+    "SquintRoutine",
+    "SquintTutorial",
+    "WidenRoutine",
+    "WidenTutorial"
+  ],
+  "restored_existing_keys": [
+    "WinkLeftTutorial",
+    "WinkLeftRoutine",
+    "WinkRightTutorial",
+    "WinkRightRoutine",
+    "BlinkTutorial",
+    "BlinkRoutine"
+  ],
+  "preserved_row_sha256": {
+    "WinkLeftTutorial": {
+      "locales": "non-English",
+      "sha256": "80e2cefd507d3f06b8fd88f97bac7e5f438336a15651311213450b4e31b92f53"
+    },
+    "WinkLeftRoutine": {
+      "locales": "non-English",
+      "sha256": "293582a3ca333f336a2d7e7a0e1ab562a0b2fd6c3818664a87ae2732ef559e59"
+    },
+    "WinkRightTutorial": {
+      "locales": "non-English",
+      "sha256": "5a70a64c32f4f11abd5c4a769ba03787ba63cf1e4efad8634431dc01ed942662"
+    },
+    "WinkRightRoutine": {
+      "locales": "non-English",
+      "sha256": "04aa95b0798bede225a762ef7b53b7e4050b789eeca7c659ad14bfa1218c51eb"
+    },
+    "BlinkTutorial": {
+      "locales": "non-English",
+      "sha256": "eca26b705b05f64110d19c5ea4c94d77f5417c9fcae177cddd2a856e41895200"
+    },
+    "BlinkRoutine": {
+      "locales": "non-English",
+      "sha256": "ba80776867b666c897f4672794894602a165b137a1d480a07b1a80dd4db61067"
+    },
+    "DilationTutorial": {
+      "locales": "all",
+      "sha256": "c5425d05e4f3848af23a72d3e601b9190ee7a7a2ba76a3bbfc69550c9f9461d8"
+    },
+    "ConvergenceTutorial": {
+      "locales": "all",
+      "sha256": "9bf79d74268c4f8de45e26a8bcea81205e159f70250a7008760abb6e17fe45dd"
+    },
+    "Connecting": {
+      "locales": "all",
+      "sha256": "2a783c9e8fafc8a1583f2e1ca513dd6ca611d7d7e34b309bd93e69fcd9b199df"
+    },
+    "SlowDown": {
+      "locales": "all",
+      "sha256": "319ba08a9a3e4d56bc7e1e43556b29c93f4e247bdd171cd64a293465586d41ad"
+    },
+    "SpeedUp": {
+      "locales": "all",
+      "sha256": "2437206bce78a183b3f1149c2bc647dac0e51623ced4a916815e6f159fc27dd3"
+    }
+  },
+  "validation_limits": [
+    "Automated checks verify completeness, placeholders, UTF-8, CSV round trips, concise prompt limits and absence of silent English fallback.",
+    "They do not establish native fluency, readability in the headset, font coverage, or Arabic/Hebrew layout quality."
+  ],
+  "concise_prompt_keys": [
+    "CaptureInstructionBlink",
+    "CaptureInstructionBrow",
+    "CaptureInstructionBrowRamp",
+    "CaptureInstructionFreeExpression",
+    "CaptureInstructionGaze",
+    "CaptureInstructionLidRamp",
+    "CaptureInstructionOpen",
+    "CaptureInstructionSquint",
+    "CaptureInstructionSquintRamp",
+    "CaptureInstructionWiden",
+    "CaptureInstructionWidenRamp",
+    "CaptureInstructionWinkLeft",
+    "CaptureInstructionWinkRight",
+    "FreshCheckComplete",
+    "GazeTutorial",
+    "GazeTutorialShort",
+    "TrainingFailed"
+  ],
+  "prompt_constraints": {
+    "max_whitespace_words": 30,
+    "max_sentences": 2,
+    "shared_guidance": "GazeTutorial and GazeTutorialShort contain the same once-only opening briefing: start when text disappears and continue until the second tone; capture task prompts contain no shared guidance or countdown."
+  }
+}

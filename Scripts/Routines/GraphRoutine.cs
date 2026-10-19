@@ -17,11 +17,7 @@ public partial class GraphRoutine : RoutineBase
     private readonly Stopwatch _stopwatch = new();
     private readonly List<Vector2> _points = [];
 
-    private int _epochCount = -1;
-    private int _batchCount = -1;
-
-    private int _epochCurrent = -1;
-    private int _batchCurrent = -1;
+    private string _metric = "";
 
     private bool _overlayMode = false;
     private Curve _overlayCurve = ResourceLoader.Load<Curve>("res://Assets/OverlayModeGraphCurve.tres");
@@ -47,12 +43,19 @@ public partial class GraphRoutine : RoutineBase
             _element.ElementTransform = Transform3D.Identity.TranslatedLocal(Vector3.Forward + (Vector3.Down * 0.25f));
         }
         _element.ElementWidth = 0.75f;
+        _interface.EpochBar.Visible = false;
+        _interface.EpochText.Text = MainScene.Instance.Tr("GraphTitle");
+        _interface.BatchText.Text = MainScene.Instance.Tr("GraphDesktopHint");
+        _interface.BatchBar.Indeterminate = true;
+        _interface.LossText.Text = MainScene.Instance.Tr("GraphWaitingMetrics");
+        _interface.TimeText.Text = string.Format(MainScene.Instance.Tr("GraphElapsed"), "0:00");
     }
     
 
     public override void Update(float delta)
     {
         base.Update(delta);
+        _interface.TimeText.Text = string.Format(MainScene.Instance.Tr("GraphElapsed"), _stopwatch.Elapsed.ToString(@"m\:ss"));
         if (!_overlayMode) return;
         var faceTarget = Backend.HeadTransform().TranslatedLocal(Vector3.Forward + (Vector3.Down * 0.25f));
         var floorTarget = OriginOffset * new Transform3D(new Basis(new Quaternion(Vector3.Forward, Vector3.Down)), Vector3.Up * 0.0025f);
@@ -64,48 +67,39 @@ public partial class GraphRoutine : RoutineBase
         _overlayCurrentTime = Mathf.Clamp(_overlayCurrentTime + delta, 0, _overlayCurve.MaxDomain);
     }
 
+    public void ShowStage(string stage)
+    {
+        _interface.EpochText.Text = MainScene.Instance.Tr(stage switch
+        {
+            "preparing" => "GraphStagePreparing",
+            "expressiontraining" => "GraphStageExpressionTraining",
+            "gazetraining" => "GraphStageGazeTraining",
+            "exporting" => "GraphStageExporting",
+            "checkingmodel" => "GraphStageCheckingModel",
+            _ => "GraphTitle"
+        });
+        _interface.BatchText.Text = MainScene.Instance.Tr("GraphDesktopHint");
+        _interface.BatchBar.Indeterminate = true;
+        _interface.LossText.Text = MainScene.Instance.Tr("GraphWaitingMetrics");
+    }
+
     public void Handle(TrainerProgressReportPacket packet)
     {
+        if (!double.IsFinite(packet.Loss) || packet.TargetProgress <= 0 || packet.CurrentProgress < 0) return;
         var loss = (float)packet.Loss;
-        _interface.LossText.Text = $"Current Loss: {loss:F6}";
-
-        var isEpoch = packet.ProgressName is "Epoch";
-        var targetLabel = isEpoch ? _interface.EpochText : _interface.BatchText;
-        var targetBar = isEpoch ? _interface.EpochBar : _interface.BatchBar;
-
-        targetLabel.Text = $"{packet.ProgressName}: {packet.CurrentProgress}/{packet.TargetProgress}";
-        targetBar.MaxValue = packet.TargetProgress;
-        targetBar.Value = packet.CurrentProgress;
-
-        if (isEpoch)
-        {
-            _epochCount = packet.TargetProgress;
-            _epochCurrent = packet.CurrentProgress;
-        }
-        else
-        {
-            _batchCount = packet.TargetProgress;
-            _batchCurrent = packet.CurrentProgress;
-        }
-        var currentTime = (float)_stopwatch.Elapsed.TotalSeconds;
-
-        _points.Add(new Vector2(currentTime, loss));
-        _interface.Graph.Points = _points.Count > 32 ? _points.TakeLast(32).ToArray() : _points.ToArray();
+        _interface.LossText.Text = $"{packet.ProgressName}: {loss:F6}";
+        _interface.BatchText.Text = string.Format(MainScene.Instance.Tr("GraphSteps"), packet.CurrentProgress, packet.TargetProgress);
+        _interface.BatchBar.Indeterminate = false;
+        _interface.BatchBar.MaxValue = packet.TargetProgress;
+        _interface.BatchBar.Value = packet.CurrentProgress;
+        // Different stages and metrics are not comparable losses on one continuous curve.
+        if (_metric != packet.ProgressName) { _points.Clear(); _metric = packet.ProgressName; }
+        _points.Add(new Vector2((float)_stopwatch.Elapsed.TotalSeconds, loss));
+        if (_points.Count > 32) _points.RemoveAt(0);
+        _interface.Graph.Points = _points.ToArray();
         _interface.Graph.QueueRedraw();
-
-        if (_epochCount < 0 || _batchCount < 0 || _epochCurrent + _batchCurrent <= 0) return;
-        
-        var totalBatchCount = _epochCount * _batchCount;
-        var completedBatches = (_epochCurrent * _batchCount) + _batchCurrent;
-
-        var progress = (float)completedBatches / totalBatchCount;
-        var remaining = 1f - progress;
-        var multiplier = remaining / progress;
-
-        var eta = currentTime * multiplier;
-        
-        if (eta <= 0f) return;
-        
-        _interface.TimeText.Text = $"ETA: {TimeSpan.FromSeconds(eta):m\\:ss}";
+        if (MainScene.Instance.CapturePhaseDiagnostics)
+            GD.Print("TRAINING_PROGRESS " + System.Text.Json.JsonSerializer.Serialize(new
+            { metric = _interface.LossText.Text, steps = _interface.BatchText.Text, stage = _interface.EpochText.Text }));
     }
 }
