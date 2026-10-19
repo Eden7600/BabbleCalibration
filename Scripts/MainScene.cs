@@ -28,6 +28,9 @@ public partial class MainScene : Node
     private ProgressCircle _measurementProgress;
     private ElementBase _measurementElement;
     private bool _measurementTargetLocked;
+    private bool _verificationTargetOffsetApplied;
+    private bool _capturePhaseDiagnostics;
+    public bool CapturePhaseDiagnostics => _capturePhaseDiagnostics;
 
     private Socket TryConnect(int retries = 60)
     {
@@ -94,6 +97,7 @@ public partial class MainScene : Node
             }
         }
         
+        _capturePhaseDiagnostics = enableDebug && argsLower.Contains("--capture-phase-diagnostics");
         if (!enableOpenVr && !enableXr && !enableDebug) throw new Exception("Invalid configuration, no backend provided");
         if (enableOpenVr && (enableXr || enableXrOverlay)) throw new Exception("Invalid configuration, OpenXR cannot be enabled at the same time as OpenVR");
         if (enableXrOverlay && !enableXr) throw new Exception("Invalid configuration, OpenXR must be enabled to use OpenXR Overlay");
@@ -143,10 +147,7 @@ public partial class MainScene : Node
                     new OverlayMessageDispatcher
                     (
                         new GodotLogger(), 
-                        new EventDrivenJsonClient
-                        (
-                            new EventDrivenTcpClient(sock)
-                        )
+                        CreateConnection(sock)
                     )
                 );
                 AnnounceReady();
@@ -195,13 +196,20 @@ public partial class MainScene : Node
             OriginOffset = new Transform3D(new Basis(newQuaternion), position);
         });*/
     }
+    private EventDrivenJsonClient CreateConnection(Socket socket)
+    {
+        var client = new EventDrivenJsonClient(new EventDrivenTcpClient(socket));
+        client.OnDisconnect += () => Callable.From(() => GetTree().Quit()).CallDeferred();
+        return client;
+    }
+
     private static readonly StringName ConnectingString = "Connecting";
     private async void AnnounceReady()
     {
         // Repeat briefly so readiness cannot be lost while the desktop dispatcher is being set up.
         for (var attempt = 0; attempt < 20; attempt++)
         {
-            SendPacket(new RoutineFinishedPacket("ready"));
+            SendPacket(new RoutineFinishedPacket("ready:reliable-eye-training:4"));
             await ToSignal(GetTree().CreateTimer(0.25), Timer.SignalName.Timeout);
         }
     }
@@ -245,11 +253,8 @@ public partial class MainScene : Node
         { "gazetutorialshort", (GazeTutorialShortString, false, false) },
         { "gazeexprtutorial", (GazeExpressionTutorialString, false, false) },
         { "blinktutorial", (BlinkTutorialString, false, false) },
-        { "blink", (BlinkRoutineString, true, false) },
         { "winklefttutorial", (WinkLeftTutorialString, false, false) },
-        { "winkleft", (WinkLeftRoutineString, true, true) },
         { "winkrighttutorial", (WinkRightTutorialString, false, false) },
-        { "winkright", (WinkRightRoutineString, true, true) },
         { "dilationtutorial", (DilationTutorialString, false, false) },
         { "widentutorial", (WidenTutorialString, false, false) },
         { "squinttutorial", (SquintTutorialString, false, false) },
@@ -261,6 +266,33 @@ public partial class MainScene : Node
         // Timer/video callbacks must be tied to the routine that created them. Setting this before
         // Initialize lets those callbacks capture the correct name instead of a later routine's name.
         CurrentRoutineName = name;
+        name = name.Split('#')[0];
+        if (name.StartsWith("trainer-", StringComparison.Ordinal))
+        {
+            _measurementElement.Root.Visible = false;
+            if (CurrentRoutine is not GraphRoutine) StartRoutine<GraphRoutine>();
+            ((GraphRoutine)CurrentRoutine).ShowStage(name[8..]);
+            return;
+        }
+        if (name.StartsWith("instruction-", StringComparison.Ordinal))
+        {
+            StartRoutine<TextTimerRoutine>(RoutineHelpers.LabelTimerRoutineArgs(
+                CaptureInstruction(name[12..]), time, true, Transform3D.Identity.TranslatedLocal(Vector3.Forward),
+                sounds: false, showProgress: false, showTestText: false));
+            return;
+        }
+        if (name.StartsWith("settle-", StringComparison.Ordinal))
+        {
+            PrepareMeasurementTarget();
+            if (name == "settle-gazecheck" && !_verificationTargetOffsetApplied)
+            {
+                MeasurementTargetTransform = MeasurementTargetTransform with { Origin = MeasurementTargetTransform.Origin + new Vector3(0.35f, 0.2f, 0) };
+                _measurementElement.ElementTransform = MeasurementTargetTransform;
+                _verificationTargetOffsetApplied = true;
+            }
+            StartRoutine<ReticleRoutine>(RoutineHelpers.MeasurementArgs(time, positional: false, sounds: false));
+            return;
+        }
 
         if (TextTimerRoutines.TryGetValue(name, out var info))
         {
@@ -281,23 +313,47 @@ public partial class MainScene : Node
                     Transform3D.Identity.TranslatedLocal(Vector3.Forward)));
                 break;
             case "gaze":
-                StartRoutine<ReticleRoutine>(RoutineHelpers.TimeArgs(time));
-                break;
+            case "gazecheck":
             case "gazeexpr":
-                StartRoutine<ReticleRoutine>(RoutineHelpers.TimeArgs(time, true));
-                break;
+            case "open":
             case "widen":
             case "squint":
             case "brow":
-                // These expression captures require the same world-fixed reticle positional
-                // packets as gaze capture; their instruction was already shown by the tutorial.
-                StartRoutine<ReticleRoutine>(RoutineHelpers.TimeArgs(time, true));
+                StartRoutine<ReticleRoutine>(RoutineHelpers.MeasurementArgs(time, positional: true, sounds: true));
+                break;
+            case "blink":
+            case "winkleft":
+            case "winkright":
+                StartRoutine<ReticleRoutine>(RoutineHelpers.MeasurementArgs(time, positional: false, sounds: true));
+                break;
+            case "widenramp":
+            case "squintramp":
+            case "browramp":
+                StartRoutine<ReticleRoutine>(RoutineHelpers.MeasurementArgs(time, positional: true, sounds: true, ramp: true));
+                break;
+            case "lidramp":
+                StartRoutine<ReticleRoutine>(RoutineHelpers.MeasurementArgs(time, positional: false, sounds: true, ramp: true, tone: true));
                 break;
             case "dilation":
                 StartRoutine<DilationRoutine>();
                 break;
             case "convergence":
                 StartRoutine<ConvergenceRoutine>(RoutineHelpers.TimeArgs(time));
+                break;
+            case "verification-complete":
+            case "training-complete":
+            case "training-failed":
+            case "training-cancelled":
+                _measurementElement.Root.Visible = false;
+                StartRoutine<TextTimerRoutine>(RoutineHelpers.LabelTimerRoutineArgs(
+                    Tr(name switch
+                    {
+                        "verification-complete" => "FreshCheckComplete",
+                        "training-complete" => "TrainingComplete",
+                        "training-failed" => "TrainingFailed",
+                        _ => "TrainingCancelled"
+                    }), time, true,
+                    Transform3D.Identity.TranslatedLocal(Vector3.Forward), sounds: false, showProgress: false, showTestText: false));
                 break;
             case "trainer":
                 // Calibration is finished: keep the persistent target through every tutorial and
@@ -317,6 +373,24 @@ public partial class MainScene : Node
         }
         
     }
+    private string CaptureInstruction(string routine) => Tr(routine switch
+    {
+        "gaze" or "gazecheck" => "CaptureInstructionGaze",
+        "gazeexpr" => "CaptureInstructionFreeExpression",
+        "open" => "CaptureInstructionOpen",
+        "blink" => "CaptureInstructionBlink",
+        "winkleft" => "CaptureInstructionWinkLeft",
+        "winkright" => "CaptureInstructionWinkRight",
+        "widen" => "CaptureInstructionWiden",
+        "squint" => "CaptureInstructionSquint",
+        "brow" => "CaptureInstructionBrow",
+        "lidramp" => "CaptureInstructionLidRamp",
+        "widenramp" => "CaptureInstructionWidenRamp",
+        "squintramp" => "CaptureInstructionSquintRamp",
+        "browramp" => "CaptureInstructionBrowRamp",
+        _ => throw new ArgumentException("Unknown capture instruction", nameof(routine))
+    });
+
     public void TimerEndConnect(Timer timer)
     {
         var routineName = CurrentRoutineName;
@@ -325,26 +399,29 @@ public partial class MainScene : Node
 
     public ProgressCircle StartMeasurementProgress(float time)
     {
-        // XR tracking can still report height 0 while the scene starts. Use the latest valid head
-        // pose when the first measurement begins, then keep the target fixed for all later tests.
-        if (!_measurementTargetLocked)
-        {
-            UpdateMeasurementTargetHeight();
-            _measurementTargetLocked = true;
-        }
+        PrepareMeasurementTarget();
         _measurementProgress.Start(time);
         TimerEndConnect(_measurementProgress.Timer);
         return _measurementProgress;
+    }
+
+    private void PrepareMeasurementTarget()
+    {
+        if (_measurementTargetLocked) return;
+        UpdateMeasurementTargetHeight();
+        _measurementTargetLocked = true;
     }
 
     public void SendRoutineEnded(string routineName)
     {
         // A deferred/final callback from the previous routine must not complete the current step.
         if (!string.Equals(CurrentRoutineName, routineName, StringComparison.Ordinal)) return;
+        LogCapturePhase("end");
+        CurrentRoutine?.End();
         SendPacket(new RoutineFinishedPacket(routineName));
     }
-    public void PlayStartSound() => PlaySound(StartSound);
-    public void PlayEndSound() => PlaySound(EndSound);
+    public void PlayStartSound() { LogCaptureSound("start"); PlaySound(StartSound); }
+    public void PlayEndSound() { LogCaptureSound("end"); PlaySound(EndSound); }
     private void PlaySound(AudioStream stream)
     {
         _audioPlayer.Stop();
@@ -378,5 +455,33 @@ public partial class MainScene : Node
         Backend.ClearElements();
         CurrentRoutine = new T();
         CurrentRoutine.Initialize(Backend, args);
+        LogCapturePhase("start");
+    }
+
+    private void LogCaptureSound(string cue)
+    {
+        if (_capturePhaseDiagnostics) GD.Print("CAPTURE_SOUND " + System.Text.Json.JsonSerializer.Serialize(new { routine = CurrentRoutineName, cue }));
+    }
+
+    private void LogCapturePhase(string boundary)
+    {
+        if (!_capturePhaseDiagnostics || CurrentRoutineName is null || _measurementElement is null) return;
+        var labels = new System.Collections.Generic.List<string>();
+        CollectLabels(Backend.Self);
+        var position = MeasurementTargetTransform.Origin;
+        var renderedPosition = _measurementElement.ElementTransform.Origin;
+        GD.Print("CAPTURE_PHASE " + System.Text.Json.JsonSerializer.Serialize(new
+        {
+            routine = CurrentRoutineName, boundary, labels,
+            target = new[] { position.X, position.Y, position.Z },
+            rendered_target = new[] { renderedPosition.X, renderedPosition.Y, renderedPosition.Z },
+            target_visible = _measurementElement.Root.Visible,
+            motion_warning = CurrentRoutine is ReticleRoutine reticle && reticle.MotionWarning
+        }));
+        void CollectLabels(Node node)
+        {
+            if (node is Label label && label.IsVisibleInTree() && !string.IsNullOrWhiteSpace(label.Text)) labels.Add(label.Text);
+            foreach (var child in node.GetChildren()) CollectLabels(child);
+        }
     }
 }

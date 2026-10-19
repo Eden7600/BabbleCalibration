@@ -67,6 +67,11 @@ public static class RoutineHelpers
         };
     }
 
+    public static Dictionary MeasurementArgs(float time, bool positional, bool sounds, bool ramp = false, bool tone = false) => new()
+    {
+        {"time", time}, {"send_pose", positional}, {"speed_check", positional}, {"sounds", sounds}, {"ramp", ramp}, {"tone", tone}
+    };
+
     public static Dictionary TimeTextArgs(float time, string text, bool sounds = false)
     {
         return new Dictionary
