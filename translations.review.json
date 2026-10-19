@@ -118,23 +118,23 @@
     },
     "DilationTutorial": {
       "locales": "all",
-      "sha256": "c5425d05e4f3848af23a72d3e601b9190ee7a7a2ba76a3bbfc69550c9f9461d8"
+      "sha256": "b50191d214d7f0da480a43e1d24f48427df814614fc89773d80882a3d418c795"
     },
     "ConvergenceTutorial": {
       "locales": "all",
-      "sha256": "9bf79d74268c4f8de45e26a8bcea81205e159f70250a7008760abb6e17fe45dd"
+      "sha256": "8080afe2feb23f42c91ba67631f27f1bc60dbc69ff22b124a0d0c2e4b016521d"
     },
     "Connecting": {
       "locales": "all",
-      "sha256": "2a783c9e8fafc8a1583f2e1ca513dd6ca611d7d7e34b309bd93e69fcd9b199df"
+      "sha256": "c270cebc5056607de3794ca8e32f87d99913075573a13265e934ad01062ad88f"
     },
     "SlowDown": {
       "locales": "all",
-      "sha256": "319ba08a9a3e4d56bc7e1e43556b29c93f4e247bdd171cd64a293465586d41ad"
+      "sha256": "49288b11ce5e32149eaea6f002e6e79285d1ad5135ff62d269357464906847b0"
     },
     "SpeedUp": {
       "locales": "all",
-      "sha256": "2437206bce78a183b3f1149c2bc647dac0e51623ced4a916815e6f159fc27dd3"
+      "sha256": "cf01197c7bd2398fe901f559d7fd12a039846335c45a2ee3ae96fe04af706416"
     }
   },
   "validation_limits": [
